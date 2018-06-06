@@ -1,6 +1,6 @@
 Package: bench
 Title: High Precision Timing of R Expressions
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: c(
     person("Jim", "Hester", email = "james.f.hester@gmail.com", role = c("aut", "cre"))
   )
@@ -16,8 +16,8 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1.9000
 NeedsCompilation: yes
-Packaged: 2018-05-25 15:44:36 UTC; jhester
+Packaged: 2018-06-05 20:46:23 UTC; jhester
 Author: Jim Hester [aut, cre]
 Maintainer: Jim Hester <james.f.hester@gmail.com>
 Repository: CRAN
-Date/Publication: 2018-05-27 16:34:44 UTC
+Date/Publication: 2018-06-06 05:03:17 UTC

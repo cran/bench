@@ -1,6 +1,6 @@
-2c5803279958c8d0c05ee2af5ba6d83e *DESCRIPTION
+059a7017a05dfc9d3b6cd3264fee70f4 *DESCRIPTION
 de026f2a2708589d9a431175387c8155 *NAMESPACE
-7a8c724c2bd4551ca2326e5668ab53da *NEWS.md
+ace439f095e53cf8eb50303ed6145446 *NEWS.md
 7b3cc78d375edc190f225b0cd86e3a65 *R/autoplot.R
 ea7992cf90bb4cb5f36512829f62c1d5 *R/bench-package.R
 de91e810acdf28269121d8d0c69f6529 *R/bytes.R
@@ -10,7 +10,7 @@ fad03f36eb21d00ea5b0cdddaf7b9411 *R/press.R
 68e4397e6d9e74c002f49ba91f61919c *R/time.R
 9e5068ecc8d5bea86a61f505c2175a52 *R/utils.R
 57a9912a1f2742bc233cb11b6822581b *R/zzz.R
-d5fa809d294ce901bcdc205e01647bf1 *README.md
+2986cdf58a57bcbd56516b0806614af8 *README.md
 c1ed144926f2ab5333ecdc2ea19efb9c *man/as_bench_mark.Rd
 3fad74ea100323418e050d251708e958 *man/autoplot.bench_mark.Rd
 28ef12a32d2353c98a68c353c3743885 *man/bench-package.Rd
@@ -28,11 +28,11 @@ f16ce836f1e5700d1dc1ce75fab294df *man/press.Rd
 e80a0dfe3fb72b53b604e23a27d95404 *man/summary.bench_mark.Rd
 7ec880417af6983a1799998c6a248fa2 *man/system_time.Rd
 6f3dbd64acdaf9b7a84dd877f6f18ee6 *src/mark.c
-7e3a9a065697b1f7c8e436823a13c642 *src/nanotime.c
+b38c6c7a859e6b2cc4db88256ace6785 *src/nanotime.c
 2a199e99c4051ee86d32d73561f58d22 *src/nanotime.h
 d8db634775f53a1a9e93912e01b798db *tests/testthat.R
 a56252f27fa9e1a6962845380a098e7c *tests/testthat/test-bytes.R
 597bb7161d3d36be5dac65cdbbab757e *tests/testthat/test-mark.R
 c3ea6e9b56c6f9681754d8581fb47089 *tests/testthat/test-press.R
-53231ed8f2010015262dcbb987fdcdac *tests/testthat/test-system_time.R
+93be1d0cb06f47c3ddf85877e9ee749d *tests/testthat/test-system_time.R
 679bddf5c768d466870fea8e7d17e816 *tests/testthat/test-time.R
