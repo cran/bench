@@ -60,7 +60,7 @@ press <- function(..., .grid = NULL) {
     }
     parameters <- .grid
   } else {
-    parameters <- expand.grid(lapply(args[!unnamed], rlang::eval_tidy))
+    parameters <- expand.grid(lapply(args[!unnamed], rlang::eval_tidy), stringsAsFactors = FALSE)
   }
 
   status <- format(tibble::as_tibble(parameters), n = Inf)
@@ -68,7 +68,7 @@ press <- function(..., .grid = NULL) {
       Running with:
       {status[[2]]}"))
   eval_one <- function(row) {
-    e <- new.env(parent = emptyenv())
+    e <- rlang::new_data_mask(new.env(parent = emptyenv()))
     for (col in seq_along(parameters)) {
       var <- names(parameters)[[col]]
       value <- parameters[row, col]

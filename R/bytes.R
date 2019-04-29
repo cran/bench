@@ -60,7 +60,7 @@ as_bench_bytes.numeric <- function(x) {
 
 # Adapted from https://github.com/gaborcsardi/prettyunits
 #' @export
-format.bench_bytes <- function(x, scientific = FALSE, digits = 3, ...) {
+format.bench_bytes <- function(x, scientific = FALSE, digits = 3, drop0trailing = TRUE, ...) {
   bytes <- unclass(x)
 
   unit <- vcapply(x, find_unit, byte_units)
@@ -79,7 +79,7 @@ format.bench_bytes <- function(x, scientific = FALSE, digits = 3, ...) {
   large_units <- unit %in% names(byte_units)[-1]
   unit[large_units] <- paste0(unit[large_units], "B")
 
-  res <- format(res, scientific = scientific, digits = digits, drop0trailing = TRUE, ...)
+  res <- format(res, scientific = scientific, digits = digits, drop0trailing = drop0trailing, ...)
 
   paste0(res, unit)
 }
@@ -110,6 +110,11 @@ max.bench_bytes <- function(x, ...) {
 #' @export
 `[.bench_bytes` <- function(x, i) {
   new_bench_bytes(NextMethod("["))
+}
+
+#' @export
+`[[.bench_bytes` <- function(x, i) {
+  new_bench_bytes(NextMethod("[["))
 }
 
 #' @export
@@ -155,10 +160,17 @@ type_sum.bench_bytes <- function(x) {
 #'
 #' This both log transforms the times and formats the labels as a `bench_time`
 #' object.
-#' @inheritParams scales::log_trans
+#' @inheritParams bench_time_trans
 #' @keywords internal
 #' @export
 bench_bytes_trans <- function(base = 2) {
+  if (is.null(base)) {
+    return(
+      scales::trans_new("bch:byt", as.numeric, as_bench_bytes,
+        scales::pretty_breaks(), domain = c(1e-100, Inf)
+      )
+    )
+  }
   trans <- function(x) log(as.numeric(x), base)
   inv <- function(x) as_bench_bytes(base ^ as.numeric(x))
 
@@ -175,13 +187,13 @@ scale_type.bench_bytes <- function(x) "bench_bytes"
 #' @name scale_bench_time
 #' @keywords internal
 #' @export
-scale_x_bench_bytes <- function(...) {
-  ggplot2::scale_x_continuous(..., trans = bench_bytes_trans())
+scale_x_bench_bytes <- function(base = 10, ...) {
+  ggplot2::scale_x_continuous(..., trans = bench_bytes_trans(base = base))
 }
 
 #' @rdname scale_bench_time
 #' @keywords internal
 #' @export
-scale_y_bench_bytes <- function(...) {
-  ggplot2::scale_y_continuous(..., trans = bench_bytes_trans())
+scale_y_bench_bytes <- function(base = 10, ...) {
+  ggplot2::scale_y_continuous(..., trans = bench_bytes_trans(base = base))
 }

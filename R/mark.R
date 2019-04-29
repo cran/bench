@@ -14,6 +14,8 @@ NULL
 #' @param iterations If not `NULL`, the default, run each expression for
 #'   exactly this number of iterations. This overrides both `min_iterations`
 #'   and `max_iterations`.
+#' @param exprs A list of quoted expressions. If supplied overrides expressions
+#'   defined in `...`.
 #' @param min_iterations Each expression will be evaluated a minimum of `min_iterations` times.
 #' @param max_iterations Each expression will be evaluated a maximum of `max_iterations` times.
 #' @param check Check if results are consistent. If `TRUE`, checking is done
@@ -36,7 +38,7 @@ NULL
 #' @export
 mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
                  max_iterations = 10000, check = TRUE, filter_gc = TRUE,
-                 relative = FALSE, env = parent.frame()) {
+                 relative = FALSE, exprs = NULL, env = parent.frame()) {
 
   if (!is.null(iterations)) {
     min_iterations <- iterations
@@ -52,9 +54,11 @@ mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
     check <- FALSE
   }
 
-  exprs <- dots(...)
+  if (is.null(exprs)) {
+    exprs <- dots(...)
+  }
 
-  results <- list(expression = auto_name(exprs), result = list(), memory = list(), time = list(), gc = list())
+  results <- list(expression = new_bench_expr(exprs), result = list(), memory = list(), time = list(), gc = list())
 
   # Helper for evaluating with memory profiling
   eval_one <- function(e) {
@@ -99,14 +103,21 @@ mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
   }
 
   for (i in seq_len(length(exprs))) {
+    error <- NULL
     gc_msg <- with_gcinfo({
+      tryCatch(error = function(e) { e$call <- NULL; error <<- e},
       res <- .Call(mark_, exprs[[i]], env, min_time, as.integer(min_iterations), as.integer(max_iterations))
+      )
     })
+    if (!is.null(error)) {
+      stop(error)
+    }
+
     results$time[[i]] <- as_bench_time(res)
     results$gc[[i]] <- parse_gc(gc_msg)
   }
 
-  summary(bench_mark(tibble::as_tibble(results)), filter_gc = filter_gc, relative = relative)
+  summary(bench_mark(tibble::as_tibble(results, validate = FALSE)), filter_gc = filter_gc, relative = relative)
 }
 
 bench_mark <- function(x) {
@@ -124,14 +135,15 @@ as_bench_mark <- function(x) {
   bench_mark(tibble::as_tibble(x))
 }
 
-summary_cols <- c("min", "mean", "median", "max", "itr/sec", "mem_alloc", "n_gc", "n_itr", "total_time")
-data_cols <- c("result", "memory", "time", "gc")
+summary_cols <- c("min", "median", "itr/sec", "mem_alloc", "gc/sec")
+data_cols <- c("n_itr", "n_gc", "total_time", "result", "memory", "time", "gc")
 
 #' Summarize [bench::mark] results.
 #'
 #' @param object [bench_mark] object to summarize.
-#' @param filter_gc If `TRUE` filter iterations that contained at least one
-#'   garbage collection before summarizing.
+#' @param filter_gc If `TRUE` remove iterations that contained at least one
+#'   garbage collection before summarizing. If `TRUE` but an expression had 
+#'   a garbage collection in every iteration, filtering is disabled, with a warning.
 #' @param relative If `TRUE` all summaries are computed relative to the minimum
 #'   execution time rather than absolute time.
 #' @param ... Additional arguments ignored.
@@ -195,19 +207,19 @@ summary.bench_mark <- function(object, filter_gc = TRUE, relative = FALSE, ...) 
     )
   }
 
-  object$mean <- new_bench_time(vdapply(times, mean))
   object$min <- new_bench_time(vdapply(times, min))
   object$median <- new_bench_time(vdapply(times, stats::median))
-  object$max <- new_bench_time(vdapply(times, max))
   object$total_time <- new_bench_time(vdapply(times, sum))
+
   object$n_itr <- viapply(times, length)
   object$`itr/sec` <-  as.numeric(object$n_itr / object$total_time)
+
+  object$n_gc <- vdapply(num_gc, sum)
+  object$`gc/sec` <-  as.numeric(object$n_gc / object$total_time)
 
   object$mem_alloc <-
     bench_bytes(
       vdapply(object$memory, function(x) if (is.null(x)) NA else sum(x$bytes, na.rm = TRUE)))
-
-  object$n_gc <- vdapply(num_gc, sum)
 
   if (isTRUE(relative)) {
     object[summary_cols] <- lapply(object[summary_cols], function(x) as.numeric(x / min(x)))
@@ -219,11 +231,6 @@ summary.bench_mark <- function(object, filter_gc = TRUE, relative = FALSE, ...) 
 #' @export
 `[.bench_mark` <- function(x, i, j, ...) {
   bench_mark(NextMethod("["))
-}
-
-#' @export
-`[[.bench_mark` <- function(x, i, ...) {
-  bench_mark(NextMethod("[["))
 }
 
 parse_allocations <- function(filename) {
@@ -243,20 +250,8 @@ parse_allocations <- function(filename) {
   profmem::readRprofmem(filename)
 }
 
-auto_name <- function(exprs) {
-  nms <- names(exprs)
-
-  if (is.null(nms)) {
-    nms <- rep("", length(exprs))
-  }
-  is_missing <- nms == ""
-  nms[is_missing] <- vapply(exprs[is_missing], deparse_trunc, character(1))
-
-  nms
-}
-
 dots <- function(...) {
-  substitute(...())
+  as.list(substitute(...()))
 }
 
 #nocov start
@@ -293,22 +288,15 @@ parse_gc <- function(x) {
   tibble::as_tibble(.Call(parse_gc_, x))
 }
 
-#' @export
-`[.bench_mark` <- function(x, ...) {
-  bench_mark(NextMethod())
-}
+utils::globalVariables(c("time", "gc"))
 
 unnest.bench_mark <- function(data, ...) {
-  # remove columns which don't make sense to unnest
-  data[c("result", "memory")] <- list(NULL)
-
   # suppressWarnings to avoid 'elements may not preserve their attributes'
   # warnings from dplyr::collapse
-  data <- suppressWarnings(NextMethod(.Generic))
+  data <- suppressWarnings(NextMethod(.Generic, data, time, gc, .drop = FALSE))
 
   # Add bench_time class back to the time column
   data$time <- bench_time(data$time)
-
 
   # Add a gc column, a factor with the highest gc performed for each expression.
   data$gc <-
@@ -320,4 +308,23 @@ unnest.bench_mark <- function(data, ...) {
   data$gc <- factor(data$gc, c("none", "level0", "level1", "level2"))
 
   data
+}
+
+#' @export
+rbind.bench_mark <- function(..., deparse.level = 1) {
+  args <- list(...)
+  desc <- unlist(lapply(args, function(x) as.character(x$expression)))
+  res <- rbind.data.frame(...)
+  attr(res$expression, "description") <- desc
+  res
+}
+
+filter.bench_mark <- function(.data, ...) {
+  dots <- rlang::quos(...)
+  idx <- Reduce(`&`, lapply(dots, rlang::eval_tidy, data = .data))
+  .data[idx, ]
+}
+
+group_by.bench_mark <- function(.data, ...) {
+  bench_mark(NextMethod())
 }

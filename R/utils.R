@@ -38,20 +38,35 @@ auto_name_vec <- function(names) {
   names
 }
 
+utils::globalVariables("_rval_")
+
 with_gcinfo <- function(expr) {
-  capture_output(type = "message", {
+  tf <- tempfile()
+  con <- file(tf, "wb")
+  sink(con, type = "message")
+  {
     old <- gcinfo(TRUE)
-    on.exit(gcinfo(old))
+    on.exit({
+      gcinfo(old)
+      sink(NULL, type = "message")
+      close(con)
+      output <- readLines(tf, warn = FALSE)
+      unlink(tf)
+      return(output)
+    })
     force(expr)
-    }
-  )
+  }
 }
 
 deparse_trunc <- function(x, width = getOption("width")) {
   text <- deparse(x, width.cutoff = width)
   if (length(text) == 1 && nchar(text) < width) return(text)
 
-  paste0(substr(text[1], 1, width - 3), "...")
+  # Remove any leading spaces
+  text <- sub("^[[:space:]]*", "", text)
+
+  # Collapse all together
+  glue::glue_collapse(text, " ", width = width)
 }
 
 # inlined from https://github.com/r-lib/cli/blob/master/R/utf8.R
@@ -68,52 +83,6 @@ is_latex_output <- function() {
   if (!("knitr" %in% loadedNamespaces())) return(FALSE)
   get("is_latex_output", asNamespace("knitr"))()
 }
-
-#nocov start
-# This is capture.output from R-3.4.3, 3.1 does not support type = "message"
-capture_output <- function(..., file = NULL, append = FALSE,
-  type = c("output", "message"), split = FALSE) {
-    args <- substitute(list(...))[-1L]
-    type <- match.arg(type)
-    rval <- NULL
-    closeit <- TRUE
-    if (is.null(file))
-        file <- textConnection("rval", "w", local = TRUE)
-    else if (is.character(file))
-        file <- file(file, if (append)
-            "a"
-        else "w")
-    else if (inherits(file, "connection")) {
-        if (!isOpen(file))
-            open(file, if (append)
-                "a"
-            else "w")
-        else closeit <- FALSE
-    }
-    else stop("'file' must be NULL, a character string or a connection")
-    sink(file, type = type, split = split)
-    on.exit({
-        sink(type = type, split = split)
-        if (closeit) close(file)
-    })
-    pf <- parent.frame()
-    evalVis <- function(expr) withVisible(eval(expr, pf))
-    for (i in seq_along(args)) {
-        expr <- args[[i]]
-        tmp <- switch(mode(expr), expression = lapply(expr, evalVis),
-            call = , name = list(evalVis(expr)), stop("bad argument"))
-        for (item in tmp) if (item$visible)
-            print(item$value)
-    }
-    on.exit()
-    sink(type = type, split = split)
-    if (closeit)
-        close(file)
-    if (is.null(rval))
-        invisible(NULL)
-    else rval
-}
-#nocov end
 
 collapse <- function(x, sep) {
   paste0(x, collapse = sep)

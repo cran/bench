@@ -5,7 +5,7 @@
 \alias{plot.bench_mark}
 \title{Autoplot method for bench_mark objects}
 \usage{
-\method{autoplot}{bench_mark}(object, type = c("beeswarm", "jitter", "ridge",
+autoplot.bench_mark(object, type = c("beeswarm", "jitter", "ridge",
   "boxplot", "violin"), ...)
 
 \method{plot}{bench_mark}(x, ..., type = c("beeswarm", "jitter", "ridge",
@@ -65,7 +65,7 @@ if (require(ggplot2)) {
   if (require(dplyr) && require(forcats)) {
 
     res \%>\%
-      mutate(expression = forcats::fct_reorder(expression, min, .desc = TRUE)) \%>\%
+      mutate(expression = forcats::fct_reorder(as.character(expression), min, .desc = TRUE)) \%>\%
       as_bench_mark() \%>\%
       autoplot("violin")
   }

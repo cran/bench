@@ -40,13 +40,20 @@
 #'   if (require(dplyr) && require(forcats)) {
 #'
 #'     res %>%
-#'       mutate(expression = forcats::fct_reorder(expression, min, .desc = TRUE)) %>%
+#'       mutate(expression = forcats::fct_reorder(as.character(expression), min, .desc = TRUE)) %>%
 #'       as_bench_mark() %>%
 #'       autoplot("violin")
 #'   }
 #' }
 autoplot.bench_mark <- function(object,
   type = c("beeswarm", "jitter", "ridge", "boxplot", "violin"),...) {
+
+  if (!(requireNamespace("ggplot2") && requireNamespace("tidyr"))) {
+    stop("`ggplot2` and `tidyr` must be installed to use `autoplot`.", call. = FALSE)
+  }
+
+  # Just convert everything to a character first
+  object$expression <- as.character(object$expression)
 
   res <- tidyr::unnest(object)
   p <- ggplot2::ggplot(res)

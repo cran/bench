@@ -139,9 +139,6 @@ describe("summary.bench_mark", {
 
     expect_equal(res1$n_gc, 6)
     expect_equal(res1$n_gc, res2$n_gc)
-
-    # The max should be higher with gc included
-    expect_gt(res2$max, res1$max)
   })
 
   it("does not issue warnings if there are no garbage collections", {
@@ -166,11 +163,10 @@ describe("summary.bench_mark", {
       res <- summary(x, filter_gc = TRUE))
 
     expect_equal(res$min, as_bench_time(c(.161, .276)))
-    expect_equal(res$mean, as_bench_time(c(.163, .338)))
     expect_equal(res$median, as_bench_time(c(.162, .338)))
-    expect_equal(res$max, as_bench_time(c(.166, .400)))
     expect_equal(res$`itr/sec`, c(6.134969, 2.958580), tolerance = 1e-5)
     expect_equal(res$mem_alloc, as_bench_bytes(c(NA, NA)))
+    expect_equal(res$`gc/sec`, c(0, 2.958580), tolerance = 1e-5)
     expect_equal(res$n_gc, c(0, 2))
     expect_equal(res$n_itr, c(3, 2))
     expect_equal(res$total_time, as_bench_time(c(.489, .676)))
@@ -190,11 +186,7 @@ describe("unnest.bench_mark", {
 
     gc_cols <- colnames(bnch$gc[[1]])
 
-    expected_cols <- c(setdiff(
-        c("expression", summary_cols, data_cols, gc_cols),
-        c("result", "memory", "gc")),
-      "gc")
-    expect_equal(colnames(res), expected_cols)
+    expect_equal(colnames(res), c(head(colnames(bnch), n = -1), c(gc_cols, "gc")))
 
     expect_equal(nrow(res), length(bnch$time[[1]]) + length(bnch$time[[2]]))
   })
