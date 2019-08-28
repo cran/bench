@@ -1,3 +1,20 @@
+# bench 1.0.3
+
+* `summary.bench_mark()` gains a `time_unit` argument, so you can report all
+  times in a consistent scale if desired (#18, #26).
+
+* `bench_mark()` now checks for user interrupts, to allow you to stop benchmarking 
+  if it takes longer than you were expecting (#49).
+
+* New `bench_memory()` to capture just the memory allocated by an expression.
+
+* `bench_time()` is now an alias for `system_time()`.
+
+* `unnest.bench_mark()` is now compatible with the upcoming tidyr 1.0.0 (#48, #51)
+
+* New `hires_time()` allows you to explicitly capture high resolution time
+  points.
+
 # bench 1.0.2
 
 * `workout()` a new function which makes timing multiple expressions in turn

@@ -27,7 +27,7 @@
 #'   dat[which(dat$x > 500), ],
 #'   subset(dat, x > 500))
 #'
-#' if (require(ggplot2)) {
+#' if (require(ggplot2) && require(tidyr)) {
 #'
 #'   # Beeswarm plot
 #'   autoplot(res)
@@ -55,7 +55,11 @@ autoplot.bench_mark <- function(object,
   # Just convert everything to a character first
   object$expression <- as.character(object$expression)
 
-  res <- tidyr::unnest(object)
+  if (tidyr_new_interface()) {
+    res <- tidyr::unnest(object, c(time, gc))
+  } else {
+    res <- tidyr::unnest(object)
+  }
   p <- ggplot2::ggplot(res)
 
   type <- match.arg(type)

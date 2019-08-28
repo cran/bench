@@ -43,6 +43,11 @@ SEXP mark_(SEXP expr, SEXP env, SEXP min_time, SEXP min_itr, SEXP max_itr) {
     REprintf("\x1E");
     REAL(out)[i] = elapsed - overhead;
     total+=elapsed;
+
+    // We could do this less than every iteration, but even with 500,000 iterations
+    // the overhead seems to be less than 200 ms, so it seems ok and simpler
+    // to just do it unconditionally on every iteration.
+    R_CheckUserInterrupt();
   }
 
   out = Rf_xlengthgets(out, i);
@@ -62,6 +67,15 @@ SEXP system_time_(SEXP expr, SEXP env) {
   SEXP out = PROTECT(Rf_allocVector(REALSXP, 2));
   REAL(out)[0] = process_end - process_begin;
   REAL(out)[1] = real_end - real_begin;
+
+  UNPROTECT(1);
+  return out;
+}
+
+SEXP hires_time_() {
+  double time = real_time();
+  SEXP out = PROTECT(Rf_allocVector(REALSXP, 1));
+  REAL(out)[0] = time;
 
   UNPROTECT(1);
   return out;
@@ -104,6 +118,7 @@ SEXP parse_gc_(SEXP x) {
 static const R_CallMethodDef CallEntries[] = {
     {"mark_", (DL_FUNC) &mark_, 5},
     {"system_time_", (DL_FUNC) &system_time_, 2},
+    {"hires_time_", (DL_FUNC) &hires_time_, 0},
     {"parse_gc_", (DL_FUNC) &parse_gc_, 1},
     {NULL, NULL, 0}
 };

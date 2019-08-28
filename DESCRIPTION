@@ -1,6 +1,6 @@
 Package: bench
 Title: High Precision Timing of R Expressions
-Version: 1.0.2
+Version: 1.0.3
 Authors@R: c(
     person("Jim", "Hester", email = "james.f.hester@gmail.com", role = c("aut", "cre"))
   )
@@ -15,10 +15,10 @@ Suggests: covr, dplyr, forcats, ggbeeswarm, ggplot2, ggridges, mockery,
         scales, testthat, tidyr (>= 0.8.1), withr
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.1.1
+RoxygenNote: 6.1.1.9000
 NeedsCompilation: yes
-Packaged: 2019-04-29 20:09:50 UTC; jhester
+Packaged: 2019-08-28 14:25:31 UTC; Administrator
 Author: Jim Hester [aut, cre]
 Maintainer: Jim Hester <james.f.hester@gmail.com>
 Repository: CRAN
-Date/Publication: 2019-04-29 20:30:02 UTC
+Date/Publication: 2019-08-28 14:50:02 UTC

@@ -38,7 +38,7 @@ NULL
 #' @export
 mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
                  max_iterations = 10000, check = TRUE, filter_gc = TRUE,
-                 relative = FALSE, exprs = NULL, env = parent.frame()) {
+                 relative = FALSE, time_unit = NULL, exprs = NULL, env = parent.frame()) {
 
   if (!is.null(iterations)) {
     min_iterations <- iterations
@@ -117,7 +117,8 @@ mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
     results$gc[[i]] <- parse_gc(gc_msg)
   }
 
-  summary(bench_mark(tibble::as_tibble(results, validate = FALSE)), filter_gc = filter_gc, relative = relative)
+  summary(bench_mark(tibble::as_tibble(results, validate = FALSE)),
+          filter_gc = filter_gc, relative = relative, time_unit = time_unit)
 }
 
 bench_mark <- function(x) {
@@ -137,15 +138,20 @@ as_bench_mark <- function(x) {
 
 summary_cols <- c("min", "median", "itr/sec", "mem_alloc", "gc/sec")
 data_cols <- c("n_itr", "n_gc", "total_time", "result", "memory", "time", "gc")
+time_cols <- c("min", "median", "total_time")
 
 #' Summarize [bench::mark] results.
 #'
 #' @param object [bench_mark] object to summarize.
 #' @param filter_gc If `TRUE` remove iterations that contained at least one
-#'   garbage collection before summarizing. If `TRUE` but an expression had 
+#'   garbage collection before summarizing. If `TRUE` but an expression had
 #'   a garbage collection in every iteration, filtering is disabled, with a warning.
 #' @param relative If `TRUE` all summaries are computed relative to the minimum
 #'   execution time rather than absolute time.
+#' @param time_unit If `NULL` the times are reported in a human readable
+#'   fashion depending on each value. If one of 'ns', 'us', 'ms', 's', 'm', 'h',
+#'   'd', 'w' the time units are instead expressed as nanoseconds, microseconds,
+#'   milliseconds, seconds, hours, minutes, days or weeks respectively.
 #' @param ... Additional arguments ignored.
 #' @details
 #'   If `filter_gc == TRUE` (the default) runs that contain a garbage
@@ -164,7 +170,10 @@ data_cols <- c("n_itr", "n_gc", "total_time", "result", "memory", "time", "gc")
 #'   - `itr/sec` - `integer` The estimated number of executions performed per second.
 #'   - `n_itr` - `integer` Total number of iterations after filtering
 #'      garbage collections (if `filter_gc == TRUE`).
-#'   - `n_gc` - `integer` Total number of garbage collections performed over all runs.
+#'   - `n_gc` - `integer` Total number of garbage collections performed over all
+#'   iterations. This is a psudo-measure of the pressure on the garbage collector, if
+#'   it varies greatly between to alternatives generally the one with fewer
+#'   collections will cause fewer allocation in real usage.
 #' @examples
 #' dat <- data.frame(x = runif(10000, 1, 1000), y=runif(10000, 1, 1000))
 #'
@@ -180,7 +189,7 @@ data_cols <- c("n_itr", "n_gc", "total_time", "result", "memory", "time", "gc")
 #' # Or output relative times
 #' summary(results, relative = TRUE)
 #' @export
-summary.bench_mark <- function(object, filter_gc = TRUE, relative = FALSE, ...) {
+summary.bench_mark <- function(object, filter_gc = TRUE, relative = FALSE, time_unit = NULL, ...) {
   nms <- colnames(object)
   parameters <- setdiff(nms, c("expression", summary_cols, data_cols))
 
@@ -223,6 +232,11 @@ summary.bench_mark <- function(object, filter_gc = TRUE, relative = FALSE, ...) 
 
   if (isTRUE(relative)) {
     object[summary_cols] <- lapply(object[summary_cols], function(x) as.numeric(x / min(x)))
+  }
+
+  if (!is.null(time_unit)) {
+    time_unit <- match.arg(time_unit, names(time_units()))
+    object[time_cols] <- lapply(object[time_cols], function(x) as.numeric(x / time_units()[time_unit]))
   }
 
   bench_mark(object[c("expression", parameters, summary_cols, data_cols)])
@@ -291,12 +305,18 @@ parse_gc <- function(x) {
 utils::globalVariables(c("time", "gc"))
 
 unnest.bench_mark <- function(data, ...) {
+  data[["expression"]] <- as.character(data[["expression"]])
+
   # suppressWarnings to avoid 'elements may not preserve their attributes'
   # warnings from dplyr::collapse
-  data <- suppressWarnings(NextMethod(.Generic, data, time, gc, .drop = FALSE))
+  if (tidyr_new_interface()) {
+    data <- suppressWarnings(NextMethod(.Generic, data, ...))
+  } else {
+    data <- suppressWarnings(NextMethod(.Generic, data, time, gc, .drop = FALSE))
+  }
 
   # Add bench_time class back to the time column
-  data$time <- bench_time(data$time)
+  data$time <- as_bench_time(data$time)
 
   # Add a gc column, a factor with the highest gc performed for each expression.
   data$gc <-
