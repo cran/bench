@@ -1,11 +1,11 @@
-58e45487ccd5f7518b4b05205620dce1 *DESCRIPTION
+2d8e8a80b04783813adab7f7d1a2d731 *DESCRIPTION
 c9b58cc48b8137a959c350ce94ba3086 *NAMESPACE
-516b86255f5d8b2d2c7d0b9fea5f7bb7 *NEWS.md
+dd2a19be41f3f40338cc4a682d4c8ad5 *NEWS.md
 e388f9f53c1c03d0223a0dc26e4ca20e *R/autoplot.R
 ea7992cf90bb4cb5f36512829f62c1d5 *R/bench-package.R
-0d267320409daa9a305cf116e94ffa80 *R/bench_time.R
+1ee5f554612a36963a0ee6d2a65578cf *R/bench_time.R
 26c7667412eecb656490716a335055d3 *R/bytes.R
-4d20f4fcd335eb7da727216cf8ef0a14 *R/expression.R
+aa09fab8bfb8b1af56de4c37dccc50fc *R/expression.R
 77e68ec28bbdde8f4bedaff981f6309f *R/hires_time.R
 d0abdc865cf32c6053af2a865b1d5c75 *R/mark.R
 bf373375c713834f66727e1d9305e0cf *R/press.R
@@ -20,7 +20,7 @@ c1ed144926f2ab5333ecdc2ea19efb9c *man/as_bench_mark.Rd
 28ef12a32d2353c98a68c353c3743885 *man/bench-package.Rd
 e00da89923ce7cb5acfefc0aebbee819 *man/bench_bytes.Rd
 b00acbed01dc7a2c5fa82573a44f2b5d *man/bench_bytes_trans.Rd
-ada7543734d44b2e893249a10417cf61 *man/bench_memory.Rd
+c18918dfaaa633fea6f00f17b5b21053 *man/bench_memory.Rd
 2e18e19606c9c1c1d5ea5ccba1642005 *man/bench_time.Rd
 a8137bcbacc4e74c922c29ed701499cc *man/bench_time_trans.Rd
 500e801a94bc5c603403b307cc3f6438 *man/figures/README-autoplot-1.png
