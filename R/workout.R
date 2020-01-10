@@ -1,12 +1,15 @@
 #' Workout a group of expressions individually
 #'
 #' Given an block of expressions in `{}` [workout()] individually times each
-#' expression in the group.
+#' expression in the group. [workout_expressions()] is a lower level function most
+#' useful when reading lists of calls from a file.
 #'
 #' @param expr one or more expressions to workout, use `{}` to pass multiple
 #'   expressions.
+#' @param exprs A list of calls to measure.
 #' @param description A name to label each expression, if not supplied the
 #'   deparsed expression will be used.
+#' @param env The environment in which the expressions should be evaluated.
 #' @export
 #' @examples
 #' workout({
@@ -17,11 +20,23 @@
 #'   length(which(evens))
 #'   sum(evens)
 #' })
+#'
+#' # The equivalent to the above, reading the code from a file
+#' workout_expressions(as.list(parse(system.file("examples/exprs.R", package = "bench"))))
 workout <- function(expr, description = NULL) {
   expr <- rlang::enquo(expr)
   env <- rlang::quo_get_env(expr)
-  exprs <- as.list(rlang::quo_get_expr(expr)[-1])
+  if (rlang::quo_get_expr(expr)[[1]] == "{") {
+    exprs <- as.list(rlang::quo_get_expr(expr)[-1])
+  } else {
+    exprs <- list(rlang::quo_get_expr(expr))
+  }
+  workout_expressions(exprs, env, description)
+}
 
+#' @rdname workout
+#' @export
+workout_expressions <- function(exprs, env = parent.frame(), description = NULL) {
   if (is.null(description)) {
     description <- names(exprs)
   }

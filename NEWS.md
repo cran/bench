@@ -1,3 +1,33 @@
+# bench 1.1.0
+
+## New features
+
+* New `bench_process_memory()` function, to return the current and maximum
+  memory used by the current process. This uses system functions to track
+  memory, so can measure memory outside of R's GC heap.
+
+* New `workout_expressions()` function, a low-level function to workout a list
+  of expressions, like those obtained via `parse()` from a file.
+
+* `mark()` gains a `memory` argument to control if it records memory
+  allocations, set `memory = FALSE` to disable recording memory allocations,
+  which can be helpful when trying to benchmark long pieces of code with many
+  allocations (#62).
+
+## Minor improvements and fixes
+
+* `mark()` now permits empty arguments, e.g. accidental trailing commas (#61).
+
+* `mark()` now errors correctly when the expressions deparsed length is
+  different.
+
+* `bench_expr` objects now work better with the upcoming versions of tibble and
+  vctrs (@romainfrancois, #64)
+
+* `autoplot.bench_mark()` provides a more informative error if the `ggbeeswarm` package is not installed (@coatless, #69).
+
+* Update documentation of `bench_mark` columns (@jdblischak, #67).
+
 # bench 1.0.4
 
 * `bench_memory()` examples no longer fail if they are run with R that does not

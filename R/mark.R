@@ -19,9 +19,12 @@ NULL
 #' @param min_iterations Each expression will be evaluated a minimum of `min_iterations` times.
 #' @param max_iterations Each expression will be evaluated a maximum of `max_iterations` times.
 #' @param check Check if results are consistent. If `TRUE`, checking is done
-#'   with [all.equal()], if `FALSE` checking is disabled. If `check` is a
-#'   function that function will be called with each pair of results to
-#'   determine consistency.
+#'   with [all.equal()], if `FALSE` checking is disabled and results are not
+#'   stored. If `check` is a function that function will be called with each
+#'   pair of results to determine consistency.
+#' @param memory If `TRUE` (the default when R is compiled with memory
+#'   profiling), track memory allocations using. If `FALSE` disable memory
+#'   tracking.
 #' @param env The environment which to evaluate the expressions
 #' @inheritParams summary.bench_mark
 #' @inherit summary.bench_mark return
@@ -37,7 +40,7 @@ NULL
 #'   subset(dat, x > 500))
 #' @export
 mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
-                 max_iterations = 10000, check = TRUE, filter_gc = TRUE,
+                 max_iterations = 10000, check = TRUE, memory = capabilities("profmem"), filter_gc = TRUE,
                  relative = FALSE, time_unit = NULL, exprs = NULL, env = parent.frame()) {
 
   if (!is.null(iterations)) {
@@ -55,49 +58,63 @@ mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
   }
 
   if (is.null(exprs)) {
-    exprs <- dots(...)
+    exprs <- rlang::exprs(...)
   }
 
-  results <- list(expression = new_bench_expr(exprs), result = list(), memory = list(), time = list(), gc = list())
+  results <- list(expression = new_bench_expr(exprs), time = list(), gc = list())
+  if (memory) {
+    results$memory <- list()
+  }
+  if (check) {
+    results$result <- list()
+  }
 
   # Helper for evaluating with memory profiling
-  eval_one <- function(e) {
+  eval_one <- function(e, profile_memory) {
     f <- tempfile()
     on.exit(unlink(f))
-    can_profile_memory <- capabilities("profmem")
-    if (can_profile_memory) {
+    if (profile_memory) {
       utils::Rprofmem(f, threshold = 1)
     }
 
     res <- eval(e, env)
-    if (can_profile_memory) {
+    if (profile_memory) {
       utils::Rprofmem(NULL)
     }
     list(result = res, memory = parse_allocations(f))
   }
 
-  # Run allocation benchmark and check results
-  for (i in seq_len(length(exprs))) {
-    res <- eval_one(exprs[[i]])
-    if (is.null(res$result)) {
-      results$result[i] <- list(res$result)
-    } else {
-      results$result[[i]] <- res$result
-    }
-    results$memory[[i]] <- res$memory
+  # We only want to evaluate these first runs if we need to check memory or results.
+  if (memory || check) {
+    # Run allocation benchmark and check results
+    for (i in seq_len(length(exprs))) {
+      res <- eval_one(exprs[[i]], memory)
+      if (check) {
+        if (is.null(res$result)) {
+          results$result[i] <- list(res$result)
+        } else {
+          results$result[[i]] <- res$result
+        }
+      }
+      if (memory) {
+        results$memory[[i]] <- res$memory
+      }
 
-    if (isTRUE(check) && i > 1) {
-      comp <- check_fun(results$result[[1]], results$result[[i]])
-      if (!isTRUE(comp)) {
-        stop(glue::glue("
-            Each result must equal the first result:
+      if (check && i > 1) {
+        comp <- check_fun(results$result[[1]], results$result[[i]])
+        if (!isTRUE(comp)) {
+          expressions <- as.character(results$expression)
+
+          stop(glue::glue("
+              Each result must equal the first result:
               `{first}` does not equal `{current}`
-            ",
-            first = results$expression[[1]],
-            current = results$expression[[i]]
-            ),
-          call. = FALSE
-        )
+              ",
+              first = expressions[[1]],
+              current = expressions[[i]]
+              ),
+            call. = FALSE
+          )
+        }
       }
     }
   }
@@ -162,18 +179,31 @@ time_cols <- c("min", "median", "total_time")
 #'   runs contain a gc.
 #' @return A [tibble][tibble::tibble] with the additional summary columns.
 #'   The following summary columns are computed
+#'   - `expression` - `bench_expr` The deparsed expression that was evaluated
+#'     (or its name if one was provided).
 #'   - `min` - `bench_time` The minimum execution time.
-#'   - `mean` - `bench_time` The arithmetic mean of execution time
 #'   - `median` - `bench_time` The sample median of execution time.
-#'   - `max` - `bench_time` The maximum execution time.
-#'   - `mem_alloc` - `bench_bytes` Total amount of memory allocated by running the expression.
-#'   - `itr/sec` - `integer` The estimated number of executions performed per second.
+#'   - `itr/sec` - `double` The estimated number of executions performed per
+#'   second.
+#'   - `mem_alloc` - `bench_bytes` Total amount of memory allocated by R while
+#'     running the expression. Memory allocated *outside* the R heap, e.g. by
+#'     `malloc()` or `new` directly is *not* tracked, take care to avoid
+#'     misinterpreting the results if running code that may do this.
+#'   - `gc/sec` - `double` The number of garbage collections per second.
 #'   - `n_itr` - `integer` Total number of iterations after filtering
 #'      garbage collections (if `filter_gc == TRUE`).
-#'   - `n_gc` - `integer` Total number of garbage collections performed over all
+#'   - `n_gc` - `double` Total number of garbage collections performed over all
 #'   iterations. This is a psudo-measure of the pressure on the garbage collector, if
 #'   it varies greatly between to alternatives generally the one with fewer
 #'   collections will cause fewer allocation in real usage.
+#'   - `total_time` - `bench_time` The total time to perform the benchmarks.
+#'   - `result` - `list` A list column of the object(s) returned by the
+#'     evaluated expression(s).
+#'   - `memory` - `list` A list column with results from [Rprofmem()].
+#'   - `time` - `list` A list column of `bench_time` vectors for each evaluated
+#'     expression.
+#'   - `gc` - `list` A list column with tibbles containing the level of
+#'     garbage collection (0-2, columns) for each iteration (rows).
 #' @examples
 #' dat <- data.frame(x = runif(10000, 1, 1000), y=runif(10000, 1, 1000))
 #'
@@ -226,9 +256,11 @@ summary.bench_mark <- function(object, filter_gc = TRUE, relative = FALSE, time_
   object$n_gc <- vdapply(num_gc, sum)
   object$`gc/sec` <-  as.numeric(object$n_gc / object$total_time)
 
-  object$mem_alloc <-
-    bench_bytes(
-      vdapply(object$memory, function(x) if (is.null(x)) NA else sum(x$bytes, na.rm = TRUE)))
+  if (!is.null(object[["memory"]])) {
+    object$mem_alloc <-
+      bench_bytes(
+        vdapply(object$memory, function(x) if (is.null(x)) NA else sum(x$bytes, na.rm = TRUE)))
+  }
 
   if (isTRUE(relative)) {
     object[summary_cols] <- lapply(object[summary_cols], function(x) as.numeric(x / min(x)))
@@ -239,7 +271,8 @@ summary.bench_mark <- function(object, filter_gc = TRUE, relative = FALSE, time_
     object[time_cols] <- lapply(object[time_cols], function(x) as.numeric(x / time_units()[time_unit]))
   }
 
-  bench_mark(object[c("expression", parameters, summary_cols, data_cols)])
+  to_keep <- intersect(c("expression", parameters, summary_cols, data_cols), names(object))
+  bench_mark(object[to_keep])
 }
 
 #' @export
@@ -261,11 +294,12 @@ parse_allocations <- function(filename) {
   }
 
   # TODO: remove this dependency / simplify parsing
-  profmem::readRprofmem(filename)
-}
-
-dots <- function(...) {
-  as.list(substitute(...()))
+  tryCatch(
+    profmem::readRprofmem(filename),
+    error = function(e) {
+      stop("Memory profiling failed.\n  If you are benchmarking parallel code you must set `memory = FALSE`.", call. = FALSE)
+    }
+  )
 }
 
 #nocov start
