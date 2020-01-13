@@ -1,6 +1,6 @@
-858040c103dc738187c496f6ddcaaf55 *DESCRIPTION
+7be51b441222e18403705cac1e4ee0b0 *DESCRIPTION
 33a2ca344d847a993d73fbbab34ca921 *NAMESPACE
-e32950b44a032a5a9dfc7c92e97a6e82 *NEWS.md
+6d8153787e90a03be44c2b1e9d6e9a29 *NEWS.md
 0d80780d0989674b5cdaba3ddadd480b *R/autoplot.R
 ea7992cf90bb4cb5f36512829f62c1d5 *R/bench-package.R
 3e4eb85b897855619f8fdf3c5fea42bc *R/bench_process_memory.R
@@ -8,7 +8,7 @@ ea7992cf90bb4cb5f36512829f62c1d5 *R/bench-package.R
 ba194d26b0344d7492987996d1dc2c49 *R/bytes.R
 a7072f7f82aceb13448c75461d63e665 *R/expression.R
 77e68ec28bbdde8f4bedaff981f6309f *R/hires_time.R
-8d58f4951fce080148ba162b0a67e89f *R/mark.R
+2ced997b04277d4e3dc62738e226c677 *R/mark.R
 bf373375c713834f66727e1d9305e0cf *R/press.R
 1d9749e3ed5d1f9b7ff37edc0c5c82ad *R/time.R
 307a70319dd2075264f545018bb71683 *R/utils.R
@@ -48,7 +48,7 @@ a0a974655bfb7e72da63bce70ae07d96 *tests/testthat/test-bench_process_memory.R
 11868a9ec8d55f835eeb90752c85d5e3 *tests/testthat/test-bench_time.R
 a56252f27fa9e1a6962845380a098e7c *tests/testthat/test-bytes.R
 0650ba599bd979b856d197b87eeb791a *tests/testthat/test-hires_time.R
-5b5daf7344b29fe2112d931787d51056 *tests/testthat/test-mark.R
+8af2acddab88e9df85b0a54b48f73c60 *tests/testthat/test-mark.R
 c3ea6e9b56c6f9681754d8581fb47089 *tests/testthat/test-press.R
 e99c3be38396c63bdc1c72271fdc7c0c *tests/testthat/test-time.R
 a75b5a6a77f0e3121feaa6fc195964a8 *tests/testthat/test-workout.R
