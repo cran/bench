@@ -26,13 +26,19 @@ summary(results, relative = TRUE)
 \seealso{
 Useful links:
 \itemize{
+  \item \url{https://bench.r-lib.org/}
   \item \url{https://github.com/r-lib/bench}
   \item Report bugs at \url{https://github.com/r-lib/bench/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Jim Hester \email{james.f.hester@gmail.com}
+\strong{Maintainer}: Davis Vaughan \email{davis@rstudio.com}
+
+Authors:
+\itemize{
+  \item Jim Hester
+}
 
 Other contributors:
 \itemize{

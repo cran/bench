@@ -10,11 +10,12 @@ press(..., .grid = NULL)
 \item{...}{If named, parameters to define, if unnamed the expression to run.
 Only one unnamed expression is permitted.}
 
-\item{.grid}{A pre-build grid of values to use, typically a \link{data.frame} or
-\link{tibble}. This is useful if you only want to use a subset of all possible combinations.}
+\item{.grid}{A pre-built grid of values to use, typically a \link{data.frame} or
+\link{tibble}. This is useful if you only want to benchmark a subset of all
+possible combinations.}
 }
 \description{
-\code{press()} is used to run \code{\link[bench:mark]{bench::mark()}} across a grid of parameters and
+\code{press()} is used to run \code{\link[=mark]{mark()}} across a grid of parameters and
 then \emph{press} the results together.
 
 The parameters you want to set are given as named arguments and a grid of

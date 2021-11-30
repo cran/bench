@@ -58,7 +58,7 @@ mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
   }
 
   if (is.null(exprs)) {
-    exprs <- rlang::exprs(...)
+    exprs <- dots(...)
   }
 
   n_exprs <- length(exprs)
@@ -130,8 +130,10 @@ mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
     results$gc[[i]] <- parse_gc(gc_msg)
   }
 
-  summary(bench_mark(tibble::as_tibble(results, validate = FALSE)),
+  out <- summary(bench_mark(tibble::as_tibble(results, .name_repair = "minimal")),
           filter_gc = filter_gc, relative = relative, time_unit = time_unit)
+
+  out
 }
 
 bench_mark <- function(x) {
@@ -244,6 +246,7 @@ summary.bench_mark <- function(object, filter_gc = TRUE, relative = FALSE, time_
 
   object$min <- new_bench_time(vdapply(times, min))
   object$median <- new_bench_time(vdapply(times, stats::median))
+  object$max <- new_bench_time(vdapply(times, max))
   object$total_time <- new_bench_time(vdapply(times, sum))
 
   object$n_itr <- viapply(times, length)
@@ -333,7 +336,9 @@ parse_gc <- function(x) {
 utils::globalVariables(c("time", "gc"))
 
 unnest.bench_mark <- function(data, ...) {
-  data[["expression"]] <- as.character(data[["expression"]])
+  if (inherits(data[["expression"]], "bench_expr")) {
+    data[["expression"]] <- as.character(data[["expression"]])
+  }
 
   # suppressWarnings to avoid 'elements may not preserve their attributes'
   # warnings from dplyr::collapse
