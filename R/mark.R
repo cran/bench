@@ -23,8 +23,8 @@ NULL
 #'   stored. If `check` is a function that function will be called with each
 #'   pair of results to determine consistency.
 #' @param memory If `TRUE` (the default when R is compiled with memory
-#'   profiling), track memory allocations using. If `FALSE` disable memory
-#'   tracking.
+#'   profiling), track memory allocations using [utils::Rprofmem()]. If `FALSE`
+#'   disable memory tracking.
 #' @param env The environment which to evaluate the expressions
 #' @inheritParams summary.bench_mark
 #' @inherit summary.bench_mark return
@@ -119,7 +119,7 @@ mark <- function(..., min_time = .5, iterations = NULL, min_iterations = 1,
     error <- NULL
     gc_msg <- with_gcinfo({
       tryCatch(error = function(e) { e$call <- NULL; error <<- e},
-      res <- .Call(mark_, exprs[[i]], env, min_time, as.integer(min_iterations), as.integer(max_iterations))
+      res <- .Call(mark_, exprs[[i]], env, min_time, as.integer(min_iterations), as.integer(max_iterations), TRUE)
       )
     })
     if (!is.null(error)) {
@@ -301,34 +301,38 @@ parse_allocations <- function(filename) {
 
 #nocov start
 
-#' Custom printing function for bench_mark objects in knitr documents
+#' Custom printing function for `bench_mark` objects in knitr documents
 #'
-#' By default data columns ('result', 'memory', 'time', 'gc') are omitted when
-#' printing in knitr. If you would like to include these columns set the knitr
-#' chunk option 'bench.all_columns = TRUE'.
-#' @param options A list of knitr chunk options set in the currently evaluated chunk.
-#' @inheritParams knitr::knit_print
+#' By default, data columns (`result`, `memory`, `time`, `gc`) are omitted when
+#' printing in knitr. If you would like to include these columns, set the knitr
+#' chunk option `bench.all_columns = TRUE`.
+#'
 #' @details
 #' You can set `bench.all_columns = TRUE` to show all columns of the bench mark
 #' object.
 #'
-#'     ```{r bench.all_columns = TRUE}
+#'     ```{r, bench.all_columns = TRUE}
 #'     bench::mark(
 #'       subset(mtcars, cyl == 3),
-#'       mtcars[mtcars$cyl == 3, ])
+#'       mtcars[mtcars$cyl == 3, ]
+#'     )
 #'     ```
+#'
+#' @inheritParams knitr::knit_print
+#'
+#' @param options A list of knitr chunk options set in the currently evaluated
+#'   chunk.
 knit_print.bench_mark <- function(x, ..., options) {
-  if (isTRUE(options$bench.all_columns)) {
-    print(x)
-  } else {
-    print(x[!colnames(x) %in% data_cols])
+  if (!isTRUE(options$bench.all_columns)) {
+    x <- x[!colnames(x) %in% data_cols]
   }
+  NextMethod()
 }
 
 #nocov end
 
 parse_gc <- function(x) {
-  # \x1E is Record Separator 
+  # \x1E is Record Separator
   x <- strsplit(paste0(x, collapse = ""), "\x1E")[[1]]
   tibble::as_tibble(.Call(parse_gc_, x))
 }

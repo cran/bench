@@ -23,10 +23,11 @@ double get_overhead(SEXP env) {
   return overhead;
 }
 
-SEXP mark_(SEXP expr, SEXP env, SEXP min_time, SEXP min_itr, SEXP max_itr) {
+SEXP mark_(SEXP expr, SEXP env, SEXP min_time, SEXP min_itr, SEXP max_itr, SEXP gcinfo) {
   R_xlen_t min_itr_ = INTEGER(min_itr)[0];
   R_xlen_t max_itr_ = INTEGER(max_itr)[0];
   double min_time_ = REAL(min_time)[0];
+  Rboolean gcinfo_ = LOGICAL(gcinfo)[0];
 
   SEXP out = PROTECT(Rf_allocVector(REALSXP, max_itr_));
 
@@ -39,8 +40,12 @@ SEXP mark_(SEXP expr, SEXP env, SEXP min_time, SEXP min_itr, SEXP max_itr) {
 
     long double elapsed = expr_elapsed_time(expr, env);
 
-    // 1E is record separator 
-    REprintf("\x1E");
+    if (gcinfo_) {
+      // We don't emit the separator during low level testing of `mark_()`
+      // 1E is record separator
+      REprintf("\x1E");
+    }
+
     REAL(out)[i] = elapsed - overhead;
     total+=elapsed;
 
@@ -72,7 +77,7 @@ SEXP system_time_(SEXP expr, SEXP env) {
   return out;
 }
 
-SEXP hires_time_() {
+SEXP hires_time_(void) {
   double time = real_time();
   SEXP out = PROTECT(Rf_allocVector(REALSXP, 1));
   REAL(out)[0] = time;
@@ -115,11 +120,11 @@ SEXP parse_gc_(SEXP x) {
   return out;
 }
 
-extern SEXP bench_process_memory_();
-extern SEXP bench_load_average_();
+extern SEXP bench_process_memory_(void);
+extern SEXP bench_load_average_(void);
 
 static const R_CallMethodDef CallEntries[] = {
-    {"mark_", (DL_FUNC) &mark_, 5},
+    {"mark_", (DL_FUNC) &mark_, 6},
     {"system_time_", (DL_FUNC) &system_time_, 2},
     {"bench_process_memory_", (DL_FUNC) &bench_process_memory_, 0},
     {"bench_load_average_", (DL_FUNC) &bench_load_average_, 0},

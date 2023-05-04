@@ -1,3 +1,21 @@
+# bench 1.1.3
+
+* Long unnamed `bench_expr` expressions are now truncated correctly when used as
+  columns of a tibble (#94).
+
+* `bench_mark` tibbles now respect the knitr paged df option (#103).
+
+* Fixed an issue where macOS specific C code paths were accidentally being used
+  on GNU Hurd (#118).
+
+* Fixed `-Wstrict-prototypes` warnings, as requested by CRAN (#124).
+
+* R >=3.5.0 is now required, which is aligned with tidyverse standards.
+
+* bench now uses testthat 3e (#129).
+
+* bench no longer Suggests mockery.
+
 # bench 1.1.2
 
 * Davis Vaughan is now the maintainer.

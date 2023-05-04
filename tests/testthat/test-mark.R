@@ -1,24 +1,22 @@
-context("test-mark.R")
-
 describe("mark_", {
   it("If min_time is Inf, runs for max_iterations", {
-    res <- .Call(mark_, quote(1), new.env(), Inf, as.integer(0), as.integer(10))
+    res <- .Call(mark_, quote(1), new.env(), Inf, as.integer(0), as.integer(10), FALSE)
     expect_equal(length(res), 10)
 
-    res <- .Call(mark_, quote(1), new.env(), Inf, as.integer(0), as.integer(20))
+    res <- .Call(mark_, quote(1), new.env(), Inf, as.integer(0), as.integer(20), FALSE)
     expect_equal(length(res), 20)
   })
 
   it("If min_time is 0, runs for min_iterations", {
-    res <- .Call(mark_, quote(1), new.env(), 0, as.integer(1), as.integer(10))
+    res <- .Call(mark_, quote(1), new.env(), 0, as.integer(1), as.integer(10), FALSE)
     expect_equal(length(res), 1)
 
-    res <- .Call(mark_, quote(1), new.env(), 0, as.integer(5), as.integer(10))
+    res <- .Call(mark_, quote(1), new.env(), 0, as.integer(5), as.integer(10), FALSE)
     expect_equal(length(res), 5)
   })
 
   it("If min_time is 0, runs for min_iterations", {
-    res <- .Call(mark_, quote({i <- 1; while(i < 10000) i <- i + 1}), new.env(), .1, as.integer(1), as.integer(1000))
+    res <- .Call(mark_, quote({i <- 1; while(i < 10000) i <- i + 1}), new.env(), .1, as.integer(1), as.integer(1000), FALSE)
 
     expect_gte(length(res), 1)
     expect_lte(length(res), 1000)
@@ -26,7 +24,7 @@ describe("mark_", {
 
   it("Evaluates code in the environment", {
     e <- new.env(parent = baseenv())
-    res <- .Call(mark_, quote({a <- 42}), e, Inf, as.integer(1), as.integer(1))
+    res <- .Call(mark_, quote({a <- 42}), e, Inf, as.integer(1), as.integer(1), FALSE)
     expect_equal(e[["a"]], 42)
   })
 })
@@ -35,7 +33,7 @@ describe("mark", {
   it("Uses all.equal to check results by default", {
     res <- mark(1 + 1, 1L + 1L, check = TRUE, iterations = 1)
 
-    expect_is(res$result, "list")
+    expect_type(res$result, "list")
     expect_true(all.equal(res$result[[1]], res$result[[2]]))
   })
   it("Can use other functions to check results like identical to check results", {
@@ -51,7 +49,7 @@ describe("mark", {
     # Function that always returns true
     res <- mark(1 + 1, 1 + 2, check = function(x, y) TRUE, iterations = 1)
 
-    expect_is(res$result, "list")
+    expect_type(res$result, "list")
     expect_equal(res$result[[1]], 2)
     expect_equal(res$result[[2]], 3)
   })
@@ -63,15 +61,13 @@ describe("mark", {
 
     expect_equal(length(res$memory), 2)
 
-    expect_is(res$memory[[1]], "Rprofmem")
+    expect_s3_class(res$memory[[1]], "Rprofmem")
     expect_equal(ncol(res$memory[[1]]), 3)
     expect_gte(nrow(res$memory[[1]]), 0)
   })
 
   it("works without capabilities('profmem')", {
-    mockery::stub(mark, "capabilities", FALSE)
-
-    res <- mark(1, 2, check = FALSE, iterations = 1)
+    res <- mark(1, 2, check = FALSE, iterations = 1, memory = FALSE)
 
     expect_equal(res$memory, vector("list", 2))
     expect_equal(res$mem_alloc, as_bench_bytes(c(NA, NA)))
@@ -81,30 +77,31 @@ describe("mark", {
     expect_equal(res$result, list(NULL))
   })
   it("Can errors with the deparsed expressions", {
-    expect_error(msg = "`1` does not equal `3`",
-      mark(1, 1, 3, max_iterations = 10))
+    expect_snapshot(error = TRUE, {
+      mark(1, 1, 3, max_iterations = 10)
+    })
   })
 
   it("Works when calls are different lengths", {
-    expect_error(msg = "does not equal",
+    expect_snapshot(error = TRUE, {
       # Here the first call deparses to length 2, the second to length 4
       mark(if (TRUE) 2, if (TRUE) 1 else 3)
-    )
+    })
   })
   it("works with memory = FALSE", {
     res <- mark(1, memory = FALSE)
-    expect_is(res, "bench_mark")
+    expect_s3_class(res, "bench_mark")
     expect_equal(res$memory, vector("list", 1))
     expect_equal(res$mem_alloc, as_bench_bytes(NA))
   })
   it("works with check = FALSE", {
     res <- mark(1, check = FALSE)
-    expect_is(res, "bench_mark")
+    expect_s3_class(res, "bench_mark")
     expect_equal(res$result, list(NULL))
   })
   it("works with memory = FALSE and check = FALSE", {
     res <- mark(1, memory = FALSE, check = FALSE)
-    expect_is(res, "bench_mark")
+    expect_s3_class(res, "bench_mark")
     expect_equal(res$memory, list(NULL))
     expect_equal(res$mem_alloc, as_bench_bytes(NA))
   })
@@ -128,6 +125,21 @@ describe("mark", {
       1 + 3,
       2 + 2,
     )
+  })
+  it("truncates long expressions when printing (#94)", {
+    local_reproducible_output(width = 30)
+
+    name <- paste0(rep("a", 100), collapse = "")
+    exprs <- list(as.name(name))
+
+    assign(name, 1, envir = environment())
+
+    out <- mark(exprs = exprs)
+
+    # Only snapshot static columns
+    out <- out[c("expression", "result")]
+
+    expect_snapshot(out)
   })
 })
 
