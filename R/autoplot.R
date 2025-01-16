@@ -10,7 +10,7 @@
 #' @param ... Additional arguments passed to the plotting geom.
 #' @details This function requires some optional dependencies. [ggplot2][ggplot2::ggplot2-package],
 #' [tidyr][tidyr::tidyr-package], and depending on the plot type
-#' [ggbeeswarm][ggbeeswarm::ggbeeswarm], [ggridges][ggridges::ggridges].
+#' [ggbeeswarm][ggbeeswarm::ggbeeswarm], [ggridges][ggridges::ggridges-package].
 #'
 #' For `type` of `beeswarm` and `jitter` the points are colored by the highest
 #' level garbage collection performed during each iteration.
@@ -45,17 +45,18 @@
 #'       autoplot("violin")
 #'   }
 #' }
-autoplot.bench_mark <- function(object,
-  type = c("beeswarm", "jitter", "ridge", "boxplot", "violin"),...) {
+# Lazily registered in `.onLoad()`
+autoplot.bench_mark <- function(
+  object,
+  type = c("beeswarm", "jitter", "ridge", "boxplot", "violin"),
+  ...
+) {
+  rlang::check_installed(c("ggplot2", "tidyr (>= 1.0.0)"), "for `autoplot()`.")
 
-  if (!(requireNamespace("ggplot2") && requireNamespace("tidyr"))) {
-    stop("`ggplot2` and `tidyr` must be installed to use `autoplot`.", call. = FALSE)
-  }
-  
   type <- match.arg(type)
 
-  if (type == "beeswarm" && !requireNamespace("ggbeeswarm", quietly = TRUE)) {
-    stop("`ggbeeswarm` must be installed to use `type = \"beeswarm\"` option.", call. = FALSE)
+  if (type == "beeswarm") {
+    rlang::check_installed("ggbeeswarm", "to use `type = \"beeswarm\".")
   }
 
   # Just convert bench_expr to characters
@@ -63,52 +64,49 @@ autoplot.bench_mark <- function(object,
     object$expression <- as.character(object$expression)
   }
 
-  if (tidyr_new_interface()) {
-    res <- tidyr::unnest(object, c(time, gc))
-  } else {
-    res <- tidyr::unnest(object)
-  }
+  res <- tidyr::unnest(object, c(time, gc))
   p <- ggplot2::ggplot(res)
 
-
-  switch(type,
+  switch(
+    type,
     beeswarm = p <- p +
-      ggplot2::aes_string("expression", "time", color = "gc") +
-      ggbeeswarm::geom_quasirandom(...) +
-      ggplot2::coord_flip(),
+      ggplot2::aes(.data$time, .data$expression, color = .data$gc) +
+      ggbeeswarm::geom_quasirandom(..., orientation = "y"),
 
     jitter = p <- p +
-      ggplot2::aes_string("expression", "time", color = "gc") +
-      ggplot2::geom_jitter(...) +
-      ggplot2::coord_flip(),
+      ggplot2::aes(.data$time, .data$expression, color = .data$gc) +
+      ggplot2::geom_jitter(...),
 
     ridge = p <- p +
-      ggplot2::aes_string("time", "expression") +
+      ggplot2::aes(.data$time, .data$expression) +
       ggridges::geom_density_ridges(...),
 
     boxplot = p <- p +
-      ggplot2::aes_string("expression", "time") +
-      ggplot2::geom_boxplot(...) +
-      ggplot2::coord_flip(),
+      ggplot2::aes(.data$time, .data$expression) +
+      ggplot2::geom_boxplot(...),
 
     violin = p <- p +
-      ggplot2::aes_string("expression", "time") +
-      ggplot2::geom_violin(...) +
-      ggplot2::coord_flip())
+      ggplot2::aes(.data$time, .data$expression) +
+      ggplot2::geom_violin(...)
+  )
 
   parameters <- setdiff(
     colnames(object),
-    c("expression", summary_cols, data_cols, c("level0", "level1", "level2")))
+    c("expression", summary_cols, data_cols, c("level0", "level1", "level2"))
+  )
 
   if (length(parameters) == 0) {
     return(p)
   }
 
   if (length(parameters) == 2) {
-    return(p +
-      ggplot2::facet_grid(
-        paste0(parameters[[1]], "~", parameters[[2]]),
-        labeller = ggplot2::label_both))
+    return(
+      p +
+        ggplot2::facet_grid(
+          paste0(parameters[[1]], "~", parameters[[2]]),
+          labeller = ggplot2::label_both
+        )
+    )
   }
 
   p + ggplot2::facet_wrap(parameters, labeller = ggplot2::label_both)
@@ -118,7 +116,12 @@ autoplot.bench_mark <- function(object,
 #' @param x A `bench_mark` object.
 #' @param y Ignored, required for compatibility with the `plot()` generic.
 #' @export
-plot.bench_mark <- function(x, ..., type = c("beeswarm", "jitter", "ridge", "boxplot", "violin"), y) {
+plot.bench_mark <- function(
+  x,
+  ...,
+  type = c("beeswarm", "jitter", "ridge", "boxplot", "violin"),
+  y
+) {
   type <- match.arg(type)
   ggplot2::autoplot(x, type = type, ...)
 }

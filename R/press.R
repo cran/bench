@@ -15,9 +15,10 @@
 #'
 #' @param ... If named, parameters to define, if unnamed the expression to run.
 #'   Only one unnamed expression is permitted.
-#' @param .grid A pre-built grid of values to use, typically a [data.frame] or
-#'   [tibble]. This is useful if you only want to benchmark a subset of all
-#'   possible combinations.
+#' @param .grid A pre-built grid of values to use, typically a [data.frame()] or
+#'   [tibble::tibble()]. This is useful if you only want to benchmark a subset
+#'   of all possible combinations.
+#' @param .quiet If `TRUE`, progress messages will not be emitted.
 #' @export
 #' @examples
 #' # Helper function to create a simple data.frame of the specified dimensions
@@ -42,8 +43,13 @@
 #'     )
 #'   }
 #' )
-press <- function(..., .grid = NULL) {
+press <- function(..., .grid = NULL, .quiet = FALSE) {
   args <- rlang::quos(...)
+
+  assert(
+    "`.quiet` must be `TRUE` or `FALSE`",
+    isTRUE(.quiet) || isFALSE(.quiet)
+  )
 
   unnamed <- names(args) == ""
 
@@ -57,34 +63,43 @@ press <- function(..., .grid = NULL) {
 
   if (!is.null(.grid)) {
     if (any(!unnamed)) {
-      stop("Must supply either `.grid` or named arguments, not both", call. = FALSE)
+      stop(
+        "Must supply either `.grid` or named arguments, not both",
+        call. = FALSE
+      )
     }
     parameters <- .grid
   } else {
-    parameters <- expand.grid(lapply(args[!unnamed], rlang::eval_tidy), stringsAsFactors = FALSE)
+    parameters <- expand.grid(
+      lapply(args[!unnamed], rlang::eval_tidy),
+      stringsAsFactors = FALSE
+    )
   }
 
-  quiet <- bench_press_quiet()
+  # For consistent `[` methods
+  parameters <- tibble::as_tibble(parameters)
 
-  if (!quiet) {
-    status <- format(tibble::as_tibble(parameters), n = Inf)
+  if (!.quiet) {
+    status <- format(parameters, n = Inf)
     message(glue::glue("Running with:\n{status[[2]]}"))
   }
 
   eval_one <- function(row) {
-    e <- rlang::new_data_mask(new.env(parent = emptyenv()))
+    env <- rlang::new_data_mask(new.env(parent = emptyenv()))
+    names <- names(parameters)
 
-    for (col in seq_along(parameters)) {
-      var <- names(parameters)[[col]]
-      value <- parameters[row, col]
-      assign(var, value, envir = e)
+    for (i in seq_along(parameters)) {
+      name <- names[[i]]
+      column <- parameters[[i]]
+      value <- column[row]
+      assign(name, value, envir = env)
     }
 
-    if (!quiet) {
+    if (!.quiet) {
       message(status[[row + 3L]])
     }
 
-    rlang::eval_tidy(args[[which(unnamed)]], data = e)
+    rlang::eval_tidy(args[[which(unnamed)]], data = env)
   }
 
   res <- lapply(seq_len(nrow(parameters)), eval_one)
@@ -95,16 +110,6 @@ press <- function(..., .grid = NULL) {
     # TODO: print parameters / results that are unequal?
   }
   res <- do.call(rbind, res)
-  parameters <- parameters[rep(seq_len(nrow(parameters)), each = rows[[1]]), , drop = FALSE]
+  parameters <- parameters[rep(seq_len(nrow(parameters)), each = rows[[1]]), ]
   bench_mark(tibble::as_tibble(cbind(res[1], parameters, res[-1])))
 }
-
-bench_press_quiet <- function() {
-  # Internal option to silence `press()` during testing
-  isTRUE(getOption("bench.press_quiet", default = FALSE))
-}
-
-local_press_quiet <- function(frame = rlang::caller_env()) {
-  rlang::local_options(bench.press_quiet = TRUE, .frame = frame)
-}
-
